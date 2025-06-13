@@ -165,11 +165,7 @@ const Index = () => {
         setIsPlaying(false);
     }
 
-    const progressToast = toast({
-      title: "Export started",
-      description: "Preparing for export...",
-      duration: Infinity,
-    });
+    let progressToast: any;
 
     try {
       const onProgress = (progress: { stage: string; percentage?: number }) => {
@@ -177,27 +173,26 @@ const Index = () => {
         if (progress.percentage !== undefined) {
           description += `: ${progress.percentage}%`;
         }
-        progressToast.update({
-          id: progressToast.id,
-          title: `Exporting ${options.format.toUpperCase()}...`,
-          description: description,
-        });
+        
+        if (!progressToast) {
+          progressToast = toast({
+            title: `Exporting ${options.format.toUpperCase()}...`,
+            description: description,
+            duration: Infinity,
+          });
+        } else {
+          progressToast.update({
+            id: progressToast.id,
+            title: `Exporting ${options.format.toUpperCase()}...`,
+            description: description,
+          });
+        }
       };
 
-      // Handle different export formats
-      if (options.format === 'png' || options.format === 'jpg') {
-        // Single frame export
-        onProgress({ stage: 'Capturing frame' });
-        
-        const canvas = await html2canvas(lyricsContainer, {
-          useCORS: true,
-          backgroundColor: null,
-          scale: options.resolution === '4k' ? 4 : options.resolution === '1080p' ? 2 : 1,
-        });
+      // Use the optimized export function
+      const dataUrl = await exportVideo(options, lyricsContainer, onProgress);
 
-        const mimeType = options.format === 'png' ? 'image/png' : 'image/jpeg';
-        const dataUrl = canvas.toDataURL(mimeType, options.quality === 'high' ? 0.95 : options.quality === 'medium' ? 0.8 : 0.6);
-        
+      if (dataUrl) {
         const link = document.createElement('a');
         link.href = dataUrl;
         link.download = `${options.filename}.${options.format}`;
@@ -205,69 +200,27 @@ const Index = () => {
         link.click();
         document.body.removeChild(link);
 
-        progressToast.update({
-          id: progressToast.id,
-          title: "Download started",
-          description: `Your ${options.format.toUpperCase()} download should begin shortly.`,
-          duration: 5000,
-        });
-      } else {
-        // Video/GIF export
-        const totalDuration = options.duration * 1000;
-        const totalFrames = Math.ceil((totalDuration / 1000) * options.fps);
-        const frameInterval = 1000 / options.fps;
-
-        const frames: string[] = [];
-
-        onProgress({ stage: 'Capturing frames', percentage: 0 });
-
-        for (let i = 0; i < totalFrames; i++) {
-          const frameTimeMs = i * frameInterval;
-          setCurrentTime(frameTimeMs);
-          await new Promise(requestAnimationFrame);
-
-          const canvas = await html2canvas(lyricsContainer, {
-            useCORS: true,
-            backgroundColor: null,
-            scale: options.resolution === '4k' ? 2 : 1,
+        if (progressToast) {
+          progressToast.update({
+            id: progressToast.id,
+            title: "Download started",
+            description: `Your ${options.format.toUpperCase()} download should begin shortly.`,
+            duration: 5000,
           });
-
-          frames.push(canvas.toDataURL('image/png'));
-          onProgress({ stage: 'Capturing frames', percentage: Math.round(((i + 1) / totalFrames) * 100) });
         }
-
-        onProgress({ stage: 'Processing video' });
-
-        // For now, we'll create a simple slideshow-style export
-        // In a real implementation, you'd use FFmpeg.wasm or similar
-        const url = await exportVideo(options, lyricsContainer);
-
-        if (url) {
-          const link = document.createElement('a');
-          link.href = url;
-          link.download = `${options.filename}.${options.format}`;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }
-
-        progressToast.update({
-          id: progressToast.id,
-          title: "Download started",
-          description: `Your ${options.format.toUpperCase()} download should begin shortly.`,
-          duration: 5000,
-        });
       }
 
     } catch (error) {
       console.error('Export failed:', error);
-      progressToast.update({
-        id: progressToast.id,
-        title: "Export failed",
-        description: "There was an error exporting your file",
-        variant: "destructive",
-        duration: 5000,
-      });
+      if (progressToast) {
+        progressToast.update({
+          id: progressToast.id,
+          title: "Export failed",
+          description: "There was an error exporting your file",
+          variant: "destructive",
+          duration: 5000,
+        });
+      }
     } finally {
       setIsExporting(false);
       setCurrentTime(initialCurrentTime);
@@ -495,11 +448,7 @@ const Index = () => {
           </div>
           
           <div className="md:col-span-1 space-y-6 flex flex-col items-center justify-center">
-            <div className={cn(
-              "p-4 rounded-lg shadow-inner",
-              "w-[450px] h-[720px]",
-              animationBackgroundColor
-            )} ref={canvasRef}>
+            <div className="w-[450px] h-[720px] rounded-lg shadow-inner overflow-hidden" ref={canvasRef}>
               <LyricsDisplay 
                 currentLine={currentLine} 
                 displayMode={displayMode}

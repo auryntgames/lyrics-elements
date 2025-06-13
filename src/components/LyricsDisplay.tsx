@@ -126,10 +126,13 @@ const LyricsDisplay = ({
 }: LyricsDisplayProps) => {
   const [displayItems, setDisplayItems] = useState<DisplayItem[]>([]);
   const [animating, setAnimating] = useState(false);
+  const [animationKey, setAnimationKey] = useState(0);
   
   // Update display items when the current line changes
   useEffect(() => {
     setAnimating(true);
+    setAnimationKey(prev => prev + 1); // Force re-render with new animation
+    
     setTimeout(() => {
       if (currentLine) {
         let processedText = currentLine.text;
@@ -222,7 +225,7 @@ const LyricsDisplay = ({
         setDisplayItems([]);
       }
       setAnimating(false);
-    }, 100);
+    }, 50);
   }, [currentLine]);
 
   // Get alignment classes
@@ -275,10 +278,16 @@ const LyricsDisplay = ({
   if (!currentLine) {
     return (
       <div className={cn(
-        "flex flex-col items-center justify-center h-full text-white transition-all duration-500 ease-in-out backdrop-blur-sm",
-        animationBackgroundColor,
+        "flex flex-col items-center justify-center h-full text-white transition-all duration-500 ease-in-out relative overflow-hidden",
         getBackgroundEffectClass()
-      )}>
+      )}
+      style={{
+        background: animationBackgroundColor === 'bg-black' ? '#000000' :
+                   animationBackgroundColor === 'bg-blue-900' ? '#1e3a8a' :
+                   animationBackgroundColor === 'bg-red-900' ? '#7f1d1d' :
+                   animationBackgroundColor === 'bg-purple-900' ? '#581c87' :
+                   animationBackgroundColor === 'bg-green-900' ? '#14532d' : '#000000'
+      }}>
         <div className="text-2xl mb-2">🧪</div>
         <p className="text-lg font-semibold">No Lyrics Available</p>
         <p className="text-sm">Upload audio and lyrics to get started</p>
@@ -286,112 +295,136 @@ const LyricsDisplay = ({
     );
   }
   
+  // Process words for rendering with row-by-row animation
+  const processedWords = currentLine?.text
+    .replace(/-/g, ' ')
+    .replace(/\([^)]*\)/g, (match) => ' '.repeat(match.length))
+    .split(' ')
+    .filter(word => word !== '')
+    .map((word, wordIdx) => {
+      const itemsForWord: DisplayItem[] = [];
+      let remainingWord = word;
+      let wordProcessed = false;
+
+      const lowerWord = word.toLowerCase();
+      if (wordEmojiMap[lowerWord]) {
+        itemsForWord.push({ type: 'emoji', word: word, emoji: wordEmojiMap[lowerWord] });
+        wordProcessed = true;
+      }
+
+      if (!wordProcessed) {
+        let i = 0;
+        while (i < remainingWord.length) {
+          let charProcessed = false;
+
+          if (i + 1 < remainingWord.length) {
+            const twoCharOriginalCase = remainingWord.substring(i, i + 2);
+            const twoCharStandardCase = twoCharOriginalCase.charAt(0).toUpperCase() + twoCharOriginalCase.charAt(1).toLowerCase();
+            if (periodicTable[twoCharStandardCase]) {
+              itemsForWord.push({ 
+                type: 'element',
+                text: periodicTable[twoCharStandardCase].symbol,
+                element: periodicTable[twoCharStandardCase]
+              });
+              i += 2;
+              charProcessed = true;
+            }
+          }
+
+          if (!charProcessed) {
+            const oneCharOriginalCase = remainingWord.substring(i, i + 1);
+            const oneCharStandardCase = oneCharOriginalCase.toUpperCase();
+            if (periodicTable[oneCharStandardCase]) {
+               itemsForWord.push({
+                 type: 'element',
+                 text: periodicTable[oneCharStandardCase].symbol,
+                 element: periodicTable[oneCharStandardCase]
+               });
+              i += 1;
+              charProcessed = true;
+            }
+          }
+
+          if (!charProcessed) {
+             const currentSymbol = remainingWord.substring(i, i + 1);
+             const symbolElement = getSymbolElementData(currentSymbol);
+             if (symbolElement) {
+                itemsForWord.push({ 
+                   type: 'element',
+                   text: symbolElement.symbol,
+                   element: symbolElement
+                });
+                i += 1;
+                charProcessed = true;
+             }
+          }
+
+          if (!charProcessed) {
+            const unmatchedChar = remainingWord.substring(i, i + 1);
+             const unknownElement: PeriodicElement = {
+                symbol: unmatchedChar,
+                name: 'Unknown',
+                atomicNumber: 0,
+                atomicWeight: 'N/A',
+                category: 'unknown'
+             };
+            itemsForWord.push({ type: 'element', text: unmatchedChar, element: unknownElement });
+            i += 1;
+          }
+        }
+      }
+      
+      const itemsToRender = itemsForWord.filter(item => !(item.type === 'element' && item.element.category === 'unknown'));
+      return { wordIdx, items: itemsToRender, word };
+    })
+    .filter(wordData => wordData.items.length > 0);
+
+  // Group words into rows (approximately 4-6 words per row)
+  const wordsPerRow = 5;
+  const rows = [];
+  for (let i = 0; i < processedWords.length; i += wordsPerRow) {
+    rows.push(processedWords.slice(i, i + wordsPerRow));
+  }
+
   return (
     <div className={cn(
-      'flex flex-wrap w-full h-full p-4 gap-x-4 gap-y-4 overflow-hidden text-white transition-all duration-500 ease-in-out backdrop-blur-sm',
-      animationBackgroundColor,
+      'flex flex-col w-full h-full p-4 overflow-hidden text-white transition-all duration-500 ease-in-out relative',
       getMainAxisClass(),
       getCrossAxisClass(),
       getBackgroundEffectClass(),
       animating ? 'opacity-50' : 'opacity-100'
-    )}>
-      {currentLine?.text
-        .replace(/-/g, ' ')
-        .replace(/\([^)]*\)/g, (match) => ' '.repeat(match.length))
-        .split(' ')
-        .filter(word => word !== '')
-        .map((word, wordIdx) => {
-          const itemsForWord: DisplayItem[] = [];
-          let remainingWord = word;
-          let wordProcessed = false;
-
-          const lowerWord = word.toLowerCase();
-          if (wordEmojiMap[lowerWord]) {
-            itemsForWord.push({ type: 'emoji', word: word, emoji: wordEmojiMap[lowerWord] });
-            wordProcessed = true;
-          }
-
-          if (!wordProcessed) {
-            let i = 0;
-            while (i < remainingWord.length) {
-              let charProcessed = false;
-
-              if (i + 1 < remainingWord.length) {
-                const twoCharOriginalCase = remainingWord.substring(i, i + 2);
-                const twoCharStandardCase = twoCharOriginalCase.charAt(0).toUpperCase() + twoCharOriginalCase.charAt(1).toLowerCase();
-                if (periodicTable[twoCharStandardCase]) {
-                  itemsForWord.push({ 
-                    type: 'element',
-                    text: periodicTable[twoCharStandardCase].symbol,
-                    element: periodicTable[twoCharStandardCase]
-                  });
-                  i += 2;
-                  charProcessed = true;
-                }
-              }
-
-              if (!charProcessed) {
-                const oneCharOriginalCase = remainingWord.substring(i, i + 1);
-                const oneCharStandardCase = oneCharOriginalCase.toUpperCase();
-                if (periodicTable[oneCharStandardCase]) {
-                   itemsForWord.push({
-                     type: 'element',
-                     text: periodicTable[oneCharStandardCase].symbol,
-                     element: periodicTable[oneCharStandardCase]
-                   });
-                  i += 1;
-                  charProcessed = true;
-                }
-              }
-
-              if (!charProcessed) {
-                 const currentSymbol = remainingWord.substring(i, i + 1);
-                 const symbolElement = getSymbolElementData(currentSymbol);
-                 if (symbolElement) {
-                    itemsForWord.push({ 
-                       type: 'element',
-                       text: symbolElement.symbol,
-                       element: symbolElement
-                    });
-                    i += 1;
-                    charProcessed = true;
-                 }
-              }
-
-              if (!charProcessed) {
-                const unmatchedChar = remainingWord.substring(i, i + 1);
-                 const unknownElement: PeriodicElement = {
-                    symbol: unmatchedChar,
-                    name: 'Unknown',
-                    atomicNumber: 0,
-                    atomicWeight: 'N/A',
-                    category: 'unknown'
-                 };
-                itemsForWord.push({ type: 'element', text: unmatchedChar, element: unknownElement });
-                i += 1;
-              }
-            }
-          }
-          
-          const itemsToRender = itemsForWord.filter(item => !(item.type === 'element' && item.element.category === 'unknown'));
-          if (itemsToRender.length === 0) return null;
-
-          return (
-            <div key={wordIdx} className="flex flex-wrap items-center group">
+    )}
+    style={{
+      background: animationBackgroundColor === 'bg-black' ? '#000000' :
+                 animationBackgroundColor === 'bg-blue-900' ? '#1e3a8a' :
+                 animationBackgroundColor === 'bg-red-900' ? '#7f1d1d' :
+                 animationBackgroundColor === 'bg-purple-900' ? '#581c87' :
+                 animationBackgroundColor === 'bg-green-900' ? '#14532d' : '#000000'
+    }}>
+      {rows.map((row, rowIdx) => (
+        <div 
+          key={`${animationKey}-row-${rowIdx}`}
+          className="flex flex-wrap items-center justify-center gap-x-2 mb-1"
+          style={{
+            animationDelay: `${rowIdx * 100}ms`
+          }}
+        >
+          {row.map((wordData) => (
+            <div key={`${animationKey}-word-${wordData.wordIdx}`} className="flex items-center group">
               <div className="flex items-center gap-0.5">
-                {itemsToRender.map((item, itemIdx) => {
-                  const animationDelay = `${itemIdx * 50}ms`;
+                {wordData.items.map((item, itemIdx) => {
+                  const totalDelay = (rowIdx * 100) + (itemIdx * 30);
 
                   if (item.type === 'emoji') {
                     return (
                       <div 
-                        key={`emoji-${wordIdx}-${itemIdx}`} 
+                        key={`${animationKey}-emoji-${wordData.wordIdx}-${itemIdx}`} 
                         className={cn(
                           "element-tile flex flex-col items-center justify-between rounded-xl shadow-sm w-14 h-14 p-1 relative border border-white/10 transition-all duration-300 ease-out transform hover:scale-105", 
                           chemistryTileColor,
                           getAnimationClass()
                         )}
-                        style={{ animationDelay }}
+                        style={{ animationDelay: `${totalDelay}ms` }}
                       >
                         <span className="atomic-number opacity-0">0</span>
                         <div className="flex flex-col items-center justify-center flex-grow w-full">
@@ -404,15 +437,15 @@ const LyricsDisplay = ({
                   } else if (item.type === 'element') {
                     return (
                       <div 
-                        key={`element-wrapper-${wordIdx}-${itemIdx}`} 
-                        style={{ animationDelay }} 
+                        key={`${animationKey}-element-wrapper-${wordData.wordIdx}-${itemIdx}`} 
+                        style={{ animationDelay: `${totalDelay}ms` }} 
                         className={cn(
                           "transition-all duration-300 ease-out transform hover:scale-105",
                           getAnimationClass()
                         )}
                       >
                         <ElementTile
-                          key={`element-${wordIdx}-${itemIdx}-${item.text}`}
+                          key={`${animationKey}-element-${wordData.wordIdx}-${itemIdx}-${item.text}`}
                           symbol={item.element.symbol}
                           name={item.element.name}
                           atomicNumber={item.element.atomicNumber}
@@ -427,8 +460,9 @@ const LyricsDisplay = ({
                 })}
               </div>
             </div>
-          );
-        })}
+          ))}
+        </div>
+      ))}
     </div>
   );
 };
