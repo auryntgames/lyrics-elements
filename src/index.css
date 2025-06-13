@@ -158,7 +158,7 @@
   @apply bg-gradient-to-br from-violet-500/90 to-violet-600/90;
 }
 
-/* Animation for active lyrics */
+/* Enhanced Animation Keyframes */
 @keyframes pulsate {
   0% {
     transform: scale(1);
@@ -174,6 +174,180 @@
   }
 }
 
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes pop-in {
+  0% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes bounce-in {
+  0% {
+    opacity: 0;
+    transform: translateY(-30px);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(5px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rotate-in {
+  0% {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0.5);
+  }
+  100% {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+}
+
+@keyframes scale-in {
+  0% {
+    opacity: 0;
+    transform: scale(0);
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pulse-bg {
+  0%, 100% {
+    background-color: rgba(0, 0, 0, 0.8);
+  }
+  50% {
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+}
+
+@keyframes wave-bg {
+  0% {
+    background: linear-gradient(45deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+  }
+  25% {
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+  }
+  50% {
+    background: linear-gradient(225deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+  }
+  75% {
+    background: linear-gradient(315deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+  }
+  100% {
+    background: linear-gradient(45deg, rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.6));
+  }
+}
+
+@keyframes gradient-bg {
+  0% {
+    background: linear-gradient(45deg, #ff0000, #00ff00, #0000ff);
+    background-size: 400% 400%;
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes particles-bg {
+  0% {
+    background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  }
+  50% {
+    background-image: radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                      radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  }
+  100% {
+    background-image: radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                      radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+  }
+}
+
+/* Animation Classes */
 .animate-pulsate {
   animation: pulsate 2s infinite;
+}
+
+.animate-fade-in {
+  animation: fade-in 0.6s ease-out forwards;
+}
+
+.animate-slide-in {
+  animation: slide-in 0.6s ease-out forwards;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.6s ease-out forwards;
+}
+
+.animate-bounce-in {
+  animation: bounce-in 0.8s ease-out forwards;
+}
+
+.animate-rotate-in {
+  animation: rotate-in 0.8s ease-out forwards;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.6s ease-out forwards;
+}
+
+.animate-pulse-bg {
+  animation: pulse-bg 2s ease-in-out infinite;
+}
+
+.animate-wave-bg {
+  animation: wave-bg 4s ease-in-out infinite;
+}
+
+.animate-gradient-bg {
+  animation: gradient-bg 6s ease infinite;
+}
+
+.animate-particles-bg {
+  animation: particles-bg 8s ease-in-out infinite;
+  background-size: 100px 100px;
 }
